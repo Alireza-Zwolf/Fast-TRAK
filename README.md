@@ -21,14 +21,19 @@ lowest-scored examples, and tested on real data.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/oaqp_data_scaling_dark.png">
-  <img src="docs/assets/oaqp_data_scaling_light.png" alt="Test macro-F1 against training-set size for the highest-scored, random and lowest-scored subsets. From 25k examples up, the highest-scored subsets reach 0.33 to 0.39, random ones 0.31 to 0.34 and the lowest-scored ones 0.19 to 0.26.">
+  <img src="docs/assets/oaqp_data_scaling_light.png" alt="Test F1 against training-set size for the highest-scored, random and lowest-scored subsets. From 25k examples up, the highest-scored subsets reach 0.33 to 0.39, random ones 0.31 to 0.34 and the lowest-scored ones 0.19 to 0.26. All three meet at 0.30 when the whole pool of 461k examples is used.">
 </picture>
 
 With more than 10,000 training examples, the highest-scored examples give a
-better model than the same number of random ones, by 3.4 points of macro-F1
-on average and up to 7.6. The lowest-scored examples are 5 to 15 points worse
+better model than the same number of random ones, by 3.6 points of F1 on
+average and up to 7.6. The lowest-scored examples are 5 to 15 points worse
 than random, which shows the scores do separate good data from bad. With
 10,000 examples or fewer, random selection does better.
+
+At the right edge all three use the whole pool of 461,008 examples, so they
+are the same training set and meet at one point (F1 0.30). The best selected
+subset, the 175,000 highest-scored examples, reaches 0.39: choosing the data
+beats using all of it.
 
 This run used Qwen2.5-0.5B with scores from the original TRAK code path, and
 will be replaced by a Qwen 3.5 run scored with FAST-TRAK. The synthetic pool
