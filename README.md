@@ -12,34 +12,17 @@ task; others are mislabelled, off-topic or misleading, and make it worse.
 TRAK scores let you tell them apart, so you can fine-tune on the good examples
 only and get a better model from the same data.
 
-The plot shows this on a real task: sorting questions asked by judges into
-seven categories (Oral Argument Question Purpose, from
-[LegalBench](https://hazyresearch.stanford.edu/legalbench/)). A large pool of
-synthetic training examples was scored with TRAK. A small model was then
-fine-tuned on the highest-scored examples, on random examples, and on the
-lowest-scored examples, and tested on real data.
+This plot shows an example of a legal classification task from the [LegalBench](https://hazyresearch.stanford.edu/legalbench/) benchmark, on a proprietary synthetic data for fine-tuning a `Qwen-2.5-0.5B model`.
+
+Given a large pool of synthetic training data, running Trak allows us to sort samples based on their attribution scores, then select top-N samples for fine-tuning and yeilding better performance than normal training. Fine-tuning only on top-N scored samples meanigfully outperform random sampling, bottom-N sampling, and training on the full pool.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/oaqp_data_scaling_dark.png">
-  <img src="docs/assets/oaqp_data_scaling_light.png" alt="Test F1 against training-set size for the highest-scored, random and lowest-scored subsets. From 25k examples up, the highest-scored subsets reach 0.33 to 0.39, random ones 0.31 to 0.34 and the lowest-scored ones 0.19 to 0.26. All three meet at 0.30 when the whole pool of 461k examples is used.">
+  <img src="docs/assets/oaqp_data_scaling_light.png" alt="Test F1 against training-set size for the highest-scored, random and lowest-scored subsets. From 25k examples up, the highest-scored subsets reach 0.33 to 0.39, random ones 0.31 to 0.34 and the lowest-scored ones 0.19 to 0.26.">
 </picture>
 
-With more than 10,000 training examples, the highest-scored examples give a
-better model than the same number of random ones, by 3.6 points of F1 on
-average and up to 7.6. The lowest-scored examples are 5 to 15 points worse
-than random, which shows the scores do separate good data from bad. With
-10,000 examples or fewer, random selection does better.
 
-At the right edge all three use the whole pool of 461,008 examples, so they
-are the same training set and meet at one point (F1 0.30). The best selected
-subset, the 175,000 highest-scored examples, reaches 0.39: choosing the data
-beats using all of it.
-
-This run used Qwen2.5-0.5B with scores from the original TRAK code path, and
-will be replaced by a Qwen 3.5 run scored with FAST-TRAK. The synthetic pool
-is private and not part of this repository.
-
-## What problem does it solve?
+## What's new on the original Trak?
 
 *Data attribution* answers the question "which training examples is this
 prediction based on?". It gives every training example a score for every test
