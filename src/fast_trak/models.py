@@ -21,11 +21,19 @@ def model_type(base_model: str) -> str:
     return AutoConfig.from_pretrained(base_model).model_type
 
 
-def _configure_fla_kernel(is_qwen35: bool, fla_kernel: bool | None) -> None:
-    """Apply the ``fla_kernel`` setting: ``True`` requires it, ``None`` tries it."""
-    if fla_kernel is False or not is_qwen35:
-        if fla_kernel and not is_qwen35:
+def configure_fla_kernel(base_model: str, fla_kernel: bool | None = None) -> None:
+    """Select Qwen 3.5's gated-delta-rule kernel; a no-op for other models.
+
+    ``None`` uses the FLA Triton kernel when it is installed, ``True`` requires
+    it and ``False`` keeps the PyTorch fallback. The choice is fixed the first
+    time Qwen 3.5 is loaded in a process, so call this before building any
+    model, including one built for training.
+    """
+    if model_type(base_model) not in qwen35.MODEL_TYPES:
+        if fla_kernel:
             raise ValueError("The FLA kernel only applies to Qwen 3.5 models")
+        return
+    if fla_kernel is False:
         return
     try:
         qwen35.enable_fla_kernel()
@@ -34,7 +42,7 @@ def _configure_fla_kernel(is_qwen35: bool, fla_kernel: bool | None) -> None:
             raise
         logger.warning(
             "Qwen 3.5 is running the slow pure-PyTorch gated delta rule (%s). "
-            "Install fast-trak[qwen35] to use the FLA Triton kernel.",
+            "Install fla-core to use the FLA Triton kernel.",
             error,
         )
 
@@ -63,15 +71,14 @@ def load_model(
     """
     if dtype not in DTYPES:
         raise ValueError(f"Unsupported dtype {dtype!r}; choose from {sorted(DTYPES)}")
-    is_qwen35 = model_type(base_model) in qwen35.MODEL_TYPES
-    _configure_fla_kernel(is_qwen35, fla_kernel)
+    configure_fla_kernel(base_model, fla_kernel)
 
     base = AutoModelForCausalLM.from_pretrained(base_model, dtype=DTYPES[dtype])
     base.config.use_cache = False
     model = PeftModel.from_pretrained(base, adapter_dir, is_trainable=True)
     model.to(device)
     model.eval()
-    if is_qwen35:
+    if model_type(base_model) in qwen35.MODEL_TYPES:
         logger.info("Qwen 3.5 gated delta rule: %s", qwen35.gated_delta_rule_backend())
     return model
 
