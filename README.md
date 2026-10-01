@@ -1,8 +1,9 @@
 # FAST-TRAK
 
 FAST-TRAK tells you **which training examples helped, and which hurt**, a
-fine-tuned language model's prediction on a given test example. It works on
-LoRA fine-tuned models, including Qwen 3.5.
+fine-tuned language model's prediction on a given test example. It brings the
+TRAK attribution method to autoregressive language models such as Qwen 3.5,
+fine-tuned with LoRA.
 
 ## What problem does it solve?
 
@@ -14,15 +15,21 @@ mislabelled or harmful training data, and for picking the most useful subset
 of a large training pool.
 
 [TRAK](https://github.com/MadryLab/trak) (Park et al., 2023) is a widely used
-method for computing these scores without retraining the model. It needs the
-model's gradient for each training example separately, and its reference
-implementation gets them with a PyTorch feature (`torch.func.vmap`) that does
-not work on Qwen 3.5.
+method for computing these scores without retraining the model. Its official
+code, however, was not built for autoregressive (causal) language models such
+as Qwen, the kind that generate text one token at a time:
 
-FAST-TRAK computes the same per-example gradients a different way, in one
-ordinary forward and backward pass per batch, and passes them to TRAK's
-scoring code unchanged. The result is the same scores, on models TRAK could
-not handle, at batch speed.
+- It ships support for image classifiers, CLIP and BERT-style text
+  classifiers, but has no notion of a "prediction" for a model that writes
+  its answer as text.
+- It needs the model's gradient for each training example separately, and
+  gets them with a PyTorch feature (`torch.func.vmap`) that does not work on
+  Qwen 3.5.
+
+FAST-TRAK fills both gaps, so TRAK can be used on these models. It defines
+the prediction of a causal language model on a classification task, and it
+computes the per-example gradients in one ordinary forward and backward pass
+per batch. Everything after that is TRAK's own scoring code, unchanged.
 
 ## Install
 
@@ -41,17 +48,26 @@ pip install fla-core    # faster Qwen 3.5 kernel (2.4x)
 
 ## Quickstart
 
-One script runs the whole thing on the public AG News topic benchmark. It
-fine-tunes two small adapters on 4,000 news articles, then scores each of
-them against 100 test articles. It needs one CUDA GPU and takes about two
-minutes on an L40S.
+The quickstart uses [AG News](https://huggingface.co/datasets/SetFit/ag_news),
+a public dataset of short news articles. Each article has one of four topics:
+World, Sports, Business or Sci/Tech. The task is to read an article and name
+its topic.
 
 ```bash
 python examples/quickstart.py
 ```
 
-It prints the training articles that most helped and most hurt one test
-article:
+The script does three things:
+
+1. **Teach the model the task.** It fine-tunes Qwen3.5-0.8B on 4,000 training
+   articles, twice with different random seeds.
+2. **Score the training articles.** For each of 100 test articles, it gives
+   every training article a score: how much did learning from this article
+   help the model get this test article right?
+3. **Show the result** for one test article.
+
+It needs one CUDA GPU and takes about two minutes on an L40S. The data is
+downloaded automatically.
 
 ```text
 Top-10 training articles that share the test article's topic: 52%
@@ -70,8 +86,17 @@ Most harmful training articles:
   -0.1964  [World] Harmony Issues Charge Against Gold Fields (AP) ...
 ```
 
-The harmful ones are business stories that AG News files under "World":
-training on them teaches the model the wrong topic for this test article.
+How to read this:
+
+- The test article is a Business story. The training articles that helped
+  most are also labelled Business: learning from them made the model more
+  likely to answer "Business" here.
+- The ones that hurt most are stories about banks and mining companies that
+  the dataset labels "World". They look like business news, so learning from
+  them pulls the model towards the wrong answer for this test article.
+- Across all 100 test articles, the ten highest-scored training articles have
+  the same topic as the test article 52% of the time. Random training
+  articles would match 25% of the time.
 
 ## Use it on your own data
 
