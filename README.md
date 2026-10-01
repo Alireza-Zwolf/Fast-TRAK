@@ -199,7 +199,7 @@ The full pipeline is somewhat slower than the gradient step alone, because it
 also projects every gradient and writes it to disk. With two random
 projections of 1,024 dimensions, the same setup ran at 162 to 185 examples
 per second.
-
+<!-- 
 ### Accuracy
 
 The two methods should produce the same gradients. To check, the same script
@@ -217,6 +217,7 @@ with FAST-TRAK.
 In bfloat16, the setting used for speed, individual gradients differ by up to
 8% from the one-at-a-time result but point the same way (cosine similarity at
 least 0.997). Use `--model_dtype float32` if you need tighter agreement.
+-->
 
 To run the benchmark on your own model and data:
 
