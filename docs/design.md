@@ -120,17 +120,5 @@ traker = TRAKer(
 
 ## Module map
 
-| Module | Responsibility |
-|---|---|
-| `gradients.py` | hook-based exact per-example LoRA gradients |
-| `outputs.py` | answer-margin model output and its loss factor |
-| `traker.py` | multi-projection TRAKer, OOM-split helper |
-| `projection.py` | projector sized to the adapter gradient |
-| `data.py` | file reading, tokenisation, token-budget batching |
-| `labels.py` | label to first-token resolution |
-| `models.py` | base model and adapter loading |
-| `qwen35.py` | Qwen 3.5 kernel selection and batching defaults |
-| `store.py` | store metadata validation |
-| `pipeline.py` | the `setup`, `featurize` and `score` stages |
-| `selection.py` | top, bottom and random subsets from a ranking |
-| `cli.py` | the `fast-trak` command |
+See [src/fast_trak/README.md](../src/fast_trak/README.md) for what each module
+does and where to start reading.
