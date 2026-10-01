@@ -14,7 +14,7 @@ only and get a better model from the same data.
 
 This plot shows an example of a legal classification task from the [LegalBench](https://hazyresearch.stanford.edu/legalbench/) benchmark, on a proprietary synthetic data for fine-tuning a `Qwen-2.5-0.5B model`.
 
-Given a large pool of synthetic training data, running Trak allows us to sort samples based on their attribution scores, then select top-N samples for fine-tuning and yeilding better performance than normal training. Fine-tuning only on top-N scored samples meanigfully outperform random sampling, bottom-N sampling, and training on the full pool.
+Given a large pool of synthetic training data, Trak allows us to sort samples based on their attribution scores, then select top-N samples for fine-tuning and yeilding better performance than normal training. Fine-tuning only on top-N scored samples meanigfully outperform random sampling, bottom-N sampling, and training on the full pool.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/oaqp_data_scaling_dark.png">
