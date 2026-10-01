@@ -5,6 +5,35 @@ fine-tuned language model's prediction on a given test example. It brings the
 TRAK attribution method to autoregressive language models such as Qwen 3.5,
 fine-tuned with LoRA.
 
+## What is it useful for?
+
+Not every training example is worth training on. Some teach the model the
+task; others are mislabelled, off-topic or misleading, and make it worse.
+TRAK scores let you tell them apart, so you can fine-tune on the good examples
+only and get a better model from the same data.
+
+The plot shows this on a real task: sorting questions asked by judges into
+seven categories (Oral Argument Question Purpose, from
+[LegalBench](https://hazyresearch.stanford.edu/legalbench/)). A large pool of
+synthetic training examples was scored with TRAK. A small model was then
+fine-tuned on the highest-scored examples, on random examples, and on the
+lowest-scored examples, and tested on real data.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/oaqp_data_scaling_dark.png">
+  <img src="docs/assets/oaqp_data_scaling_light.png" alt="Test macro-F1 against training-set size for the highest-scored, random and lowest-scored subsets. From 25k examples up, the highest-scored subsets reach 0.33 to 0.39, random ones 0.31 to 0.34 and the lowest-scored ones 0.19 to 0.26.">
+</picture>
+
+With more than 10,000 training examples, the highest-scored examples give a
+better model than the same number of random ones, by 3.4 points of macro-F1
+on average and up to 7.6. The lowest-scored examples are 5 to 15 points worse
+than random, which shows the scores do separate good data from bad. With
+10,000 examples or fewer, random selection does better.
+
+This run used Qwen2.5-0.5B with scores from the original TRAK code path, and
+will be replaced by a Qwen 3.5 run scored with FAST-TRAK. The synthetic pool
+is private and not part of this repository.
+
 ## What problem does it solve?
 
 *Data attribution* answers the question "which training examples is this
@@ -141,41 +170,73 @@ The rest of the speed comes from batching prompts by length, computing only
 the output the score needs, and computing each gradient once even when it is
 used several times. Details are in [docs/design.md](docs/design.md).
 
-## How fast and how accurate?
+## Benchmark
 
-Measured on one NVIDIA L40S with Qwen3.5-0.8B (rank-16 LoRA, prompts up to
-512 tokens):
+The benchmark times the step FAST-TRAK replaces: computing one gradient per
+training example. It compares two ways of getting exactly the same gradients.
+
+- **FAST-TRAK:** a whole batch of examples in one forward and backward pass.
+- **Baseline:** one example at a time, each with its own forward and backward
+  pass. This is the only other way to get exact per-example gradients on a
+  model that `torch.func.vmap` cannot handle.
+
+### Setup
 
 | | |
 |---|---|
-| Speed | 205 training examples per second |
-| Compared with one example at a time | 5 per second, so 40x faster |
-| Gradient error against one example at a time | 0.0006% (float32) |
+| GPU | 1x NVIDIA L40S (46 GB) |
+| Software | Python 3.12, PyTorch 2.13 (CUDA 13.2), Transformers 5.15, PEFT 0.20, fla-core 0.4.1 |
+| Model | `Qwen/Qwen3.5-0.8B-Base`, bfloat16, FLA kernel enabled |
+| Adapter | LoRA rank 16 on all attention and DeltaNet projection layers, 5,514,240 trainable weights |
+| Data | 2,000 prompts from the Oral Argument Question Purpose task, 14 to 74 tokens each (mean 43) |
+| Batching | up to 4,096 padded tokens per batch, widths rounded up to a multiple of 64; 32 batches in total |
 
-Reproduce these with [`benchmarks/throughput.py`](benchmarks/throughput.py).
+What is timed: the forward pass, the backward pass and assembling the
+per-example gradients, after one warm-up batch. Loading the model, tokenising,
+the random projection and writing to disk are not included. The baseline was
+timed on 64 of the 2,000 prompts, spread evenly across the length range. Each
+figure is from a single run.
 
-## Does picking data by score help?
+### Results
 
-FAST-TRAK was built for a thesis on legal text classification with little
-real data. A large pool of synthetic training examples was scored, subsets
-were chosen by score, and a small model was fine-tuned on each subset and
-tested on real data from the Oral Argument Question Purpose task of
-[LegalBench](https://hazyresearch.stanford.edu/legalbench/).
+| Method | Examples per second | Peak GPU memory |
+|---|---|---|
+| FAST-TRAK (batched) | 205 | 11.9 GB |
+| Baseline (one example at a time) | 5.2 | not measured |
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/oaqp_data_scaling_dark.png">
-  <img src="docs/assets/oaqp_data_scaling_light.png" alt="Test accuracy against training-set size for the highest-scored, random and lowest-scored subsets. From 25k examples up, the highest-scored subsets reach 40 to 47 percent, random ones about 36 percent and the lowest-scored ones 21 to 28 percent.">
-</picture>
+FAST-TRAK is 40x faster on this setup. The prompts here are short; longer
+prompts fit fewer examples per batch, so expect fewer examples per second.
 
-Beyond 10,000 examples, the highest-scored subsets beat random subsets of the
-same size by 3 to 10 points of accuracy, and the lowest-scored subsets are 8
-to 17 points worse than random. Below 10,000, random is as good or better.
+The full pipeline is somewhat slower than the gradient step alone, because it
+also projects every gradient and writes it to disk. With two random
+projections of 1,024 dimensions, the same setup ran at 162 to 185 examples
+per second.
 
-This figure comes from an earlier run on Qwen2.5-0.5B, scored with the
-original TRAK code path, and will be replaced by a Qwen 3.5 run. The synthetic
-pool is private and not part of this repository. On Qwen 3.5, FAST-TRAK's
-scores on the same task match the thesis implementation to within the
-difference between two identical runs.
+### Accuracy
+
+The two methods should produce the same gradients. To check, the same script
+measures the largest relative difference between them over the baseline
+prompts. Float32 without the FLA kernel is the cleanest comparison, because
+the kernel and bfloat16 each add rounding of their own that has nothing to do
+with FAST-TRAK.
+
+| Precision | Kernel | Largest relative difference | Prompts compared |
+|---|---|---|---|
+| float32 | PyTorch | 0.0006% | 32 |
+| float32 | FLA | 0.18% | 64 |
+| bfloat16 | FLA | 8.0% | 64 |
+
+In bfloat16, the setting used for speed, individual gradients differ by up to
+8% from the one-at-a-time result but point the same way (cosine similarity at
+least 0.997). Use `--model_dtype float32` if you need tighter agreement.
+
+To run the benchmark on your own model and data:
+
+```bash
+python benchmarks/throughput.py \
+    --base_model Qwen/Qwen3.5-0.8B-Base --checkpoint path/to/adapter \
+    --candidates train.tsv --labels yes no maybe --num_examples 2000
+```
 
 ## Limitations
 
