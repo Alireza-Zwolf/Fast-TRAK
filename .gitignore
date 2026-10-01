@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Run outputs: stores, adapters and generated data never belong in the repo.
+quickstart_out/
+trak_store/
+*.mmap
+*.safetensors

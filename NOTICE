@@ -1,0 +1,4 @@
+FAST-TRAK depends on, and is designed as an extension of, TRAK
+(https://github.com/MadryLab/trak), Copyright (c) 2023 Madry Lab, released
+under the MIT License. No TRAK source code is redistributed in this repository;
+it is installed as the `traker` package.
