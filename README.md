@@ -22,7 +22,7 @@ Given a large pool of synthetic training data, Trak allows us to sort samples ba
 </picture>
 
 
-## What's new on the original Trak?
+## What's new compared to original Trak?
 
 *Data attribution* answers the question "which training examples is this
 prediction based on?". It gives every training example a score for every test
