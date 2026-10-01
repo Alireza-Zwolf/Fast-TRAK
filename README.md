@@ -1,7 +1,7 @@
 # FAST-TRAK
 
 FAST-TRAK tells you **which training examples helped, and which hurt**, a
-fine-tuned language model's prediction on a given test example. It brings the original
+fine-tuned casual language model's prediction on a given test example. It brings the original
 [TRAK](https://github.com/MadryLab/trak) attribution method to autoregressive language models such as Qwen 3.5,
 fine-tuned with LoRA.
 
