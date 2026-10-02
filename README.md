@@ -12,7 +12,7 @@ task; others are mislabelled, off-topic or misleading, and make it worse.
 TRAK scores let you tell them apart, so you can fine-tune on the good examples
 only and get a better model from the same data.
 
-This plot shows an example of a legal classification task from the [LegalBench](https://hazyresearch.stanford.edu/legalbench/) benchmark, where a `Qwen-2.5-0.5B model` fine-tuned on proprietary synthetic training data for fine-tuning to perform the labeling.
+This plot shows an example of a legal classification task from the [LegalBench](https://hazyresearch.stanford.edu/legalbench/) benchmark, where a `Qwen-2.5-0.5B model` is fine-tuned on proprietary synthetic training data and evaluated on real data.
 
 Given a large pool of synthetic training data, Trak allows us to sort samples based on their attribution scores, then select top-N samples for fine-tuning, resulting in higher performance than normal training. Fine-tuning on top-N scored samples meaningfully outperform random sampling, bottom-N sampling, and training on the full pool.
 
